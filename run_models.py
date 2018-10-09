@@ -73,11 +73,11 @@ def multistim_BIO():
     update_parameters(BIO_params)
 
     for j in range(10,11):
-        update_parameters(with_WTA_params)
-        try_model(save_fn+'_with_WTA_v{}'.format(j))
+        #update_parameters(with_WTA_params)
+        #try_model(save_fn+'_with_WTA_v{}'.format(j))
 
-        #update_parameters(without_WTA_params)
-        #try_model(save_fn+'_without_WTA_v{}'.format(j))
+        update_parameters(without_WTA_params)
+        try_model(save_fn+'_without_WTA_v{}'.format(j))
 
 
 def multistim_LSTM():

@@ -189,7 +189,7 @@ def update_dependencies():
 
     # Initialize weights
     c_uniform = 0.05
-    c_gamma = 0.2
+    c_gamma = 0.1
     conn = np.float32(np.random.rand(par['n_input'], par['n_hidden']) > 0.5)
 
     if par['weight_distribution'] == 'gamma':
@@ -209,8 +209,8 @@ def update_dependencies():
         par['W_rnn_init'] *= par['W_rnn_mask']
 
         if par['balance_EI']:
-            par['W_rnn_init'][:, par['ind_inh']] = initialize([par['n_hidden'], par['num_inh_units']], par['connection_prob'], shape=0.2, scale=1.)
-            par['W_rnn_init'][par['ind_inh'], :] = initialize([ par['num_inh_units'], par['n_hidden']], par['connection_prob'], shape=0.2, scale=1.)
+            par['W_rnn_init'][:, par['ind_inh']] = initialize([par['n_hidden'], par['num_inh_units']], par['connection_prob'], shape=2*c_gamma, scale=1.)
+            par['W_rnn_init'][par['ind_inh'], :] = initialize([ par['num_inh_units'], par['n_hidden']], par['connection_prob'], shape=2*c_gamma, scale=1.)
 
     else:
         par['W_rnn_init'] = np.float32(np.random.uniform(-c_uniform, c_uniform, size = [par['n_hidden'], par['n_hidden']]))

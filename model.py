@@ -527,9 +527,9 @@ def supervised_learning(save_fn='test.pkl', gpu_id=None):
 
             # Run the model using one of the available stabilization methods
             if par['stabilization'] == 'pathint':
-                _, _, loss, AL, weight_loss, spike_loss, output = sess.run([model.train_op, \
+                _, _, loss, AL, weight_loss, spike_loss, output, hidden = sess.run([model.train_op, \
                     model.update_small_omega, model.pol_loss, model.aux_loss, \
-                    model.weight_loss, model.spike_loss, model.output], feed_dict=feed_dict)
+                    model.weight_loss, model.spike_loss, model.output, model.h], feed_dict=feed_dict)
             elif par['stabilization'] == 'EWC':
                 _, loss, AL, output = sess.run([model.train_op, model.pol_loss, \
                     model.aux_loss, model.output], feed_dict=feed_dict)
@@ -537,8 +537,8 @@ def supervised_learning(save_fn='test.pkl', gpu_id=None):
             # Display network performance
             if i%10 == 0:
                 acc = get_perf(y_hat, output, mk)
-                print('Iter {} | Accuracy {:5.3f} | Loss {:5.3f} | Weight Loss {:5.3f} | Spike Loss {:5.3f}'.format(\
-                    i, acc, loss, weight_loss, spike_loss))
+                print('Iter {} | Accuracy {:5.3f} | Loss {:5.3f} | Weight Loss {:5.3f} | Mean Activity {:5.3f} +/- {:5.3}'.format(\
+                    i, acc, loss, weight_loss, np.mean(hidden), np.std(hidden)))
 
                 task_accs = []
                 task_grads = []

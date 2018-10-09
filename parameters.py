@@ -247,7 +247,7 @@ def update_dependencies():
 
         par['Uf_init'] =  np.float32(np.random.uniform(-c_uniform, c_uniform, size = [par['n_hidden'], par['n_hidden']]))
         par['Ui_init'] =  np.float32(np.random.uniform(-c_uniform, c_uniform, size = [par['n_hidden'], par['n_hidden']]))
-        par['Uo_init'] =  np.float32(np.random.uniform(-c_uniform, c_uniformc, size = [par['n_hidden'], par['n_hidden']]))
+        par['Uo_init'] =  np.float32(np.random.uniform(-c_uniform, c_uniform, size = [par['n_hidden'], par['n_hidden']]))
         par['Uc_init'] =  np.float32(np.random.uniform(-c_uniform, c_uniform, size = [par['n_hidden'], par['n_hidden']]))
 
 

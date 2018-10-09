@@ -187,7 +187,7 @@ def gamma_c_BIO_sweep():
     save_fn = 'gamma_sweep_multistim_BIO'
     update_parameters(multistim_params)
     update_parameters(BIO_params)
-    update_parameters('n_train_batches':4001)
+    update_parameters({'n_train_batches':4001})
 
     gamma_cs = [0.01, 0.02, 0.05, 0.1, 0.2]
     for j in range(5):

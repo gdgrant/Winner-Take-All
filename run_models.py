@@ -76,8 +76,8 @@ def multistim_BIO():
         update_parameters(with_WTA_params)
         try_model(save_fn+'_with_WTA_v{}'.format(j))
 
-        update_parameters(without_WTA_params)
-        try_model(save_fn+'_without_WTA_v{}'.format(j))
+        #update_parameters(without_WTA_params)
+        #try_model(save_fn+'_without_WTA_v{}'.format(j))
 
 
 def multistim_LSTM():
@@ -186,10 +186,10 @@ def expanded_go_tasks():
 
 #go_BIO()
 #go_LSTM()
-#multistim_BIO()
+multistim_BIO()
 #multistim_LSTM()
 #kshot_testing_multistim_LSTM()
 #interleaved()
-two_tasks()
+#two_tasks()
 #six_tasks()
 #expanded_go_tasks()

@@ -181,12 +181,30 @@ def expanded_go_tasks():
         try_model(save_fn+'_without_WTA_v0')
 
 
+def gamma_c_BIO_sweep():
+
+    # Multistim task, biological network
+    save_fn = 'gamma_sweep_multistim_BIO'
+    update_parameters(multistim_params)
+    update_parameters(BIO_params)
+    update_parameters('n_train_batches':4001)
+
+    gamma_cs = [0.01, 0.02, 0.05, 0.1, 0.2]
+    for j in range(5):
+        for c in range(5):
+            update_parameters({'gamma_c':gamma_cs[c]})
+
+            update_parameters(with_WTA_params)
+            try_model(save_fn+'_with_WTA_c{}_v{}'.format(c, j))
+
+            #update_parameters(without_WTA_params)
+            #try_model(save_fn+'_without_WTA_v{}'.format(j))
 
 ####
 
 #go_BIO()
 #go_LSTM()
-multistim_BIO()
+gamma_c_BIO_sweep()
 #multistim_LSTM()
 #kshot_testing_multistim_LSTM()
 #interleaved()

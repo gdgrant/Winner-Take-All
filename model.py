@@ -78,9 +78,10 @@ class Model:
 
         self.var_dict['h_init'] = tf.get_variable('h_init', initializer=par['h_init'], trainable=True)
 
-        lesion_a = tf.assign(self.var_dict['W_rnn'][:,self.lesion_id], tf.zeros_like(self.var_dict['W_rnn'][:,self.lesion_id]))
-        lesion_b = tf.assign(self.var_dict['W_rnn'][self.lesion_id,:], tf.zeros_like(self.var_dict['W_rnn'][self.lesion_id,:]))
-        self.lesion_neuron = tf.group([lesion_a, lesion_b])
+        if par['architecture'] == 'BIO':
+            lesion_a = tf.assign(self.var_dict['W_rnn'][:,self.lesion_id], tf.zeros_like(self.var_dict['W_rnn'][:,self.lesion_id]))
+            lesion_b = tf.assign(self.var_dict['W_rnn'][self.lesion_id,:], tf.zeros_like(self.var_dict['W_rnn'][self.lesion_id,:]))
+            self.lesion_neuron = tf.group([lesion_a, lesion_b])
 
 
     def rnn_cell_loop(self):
@@ -561,7 +562,7 @@ def supervised_learning(save_fn='test.pkl', gpu_id=None):
                 print('Task accuracies:', *['| {:5.3f}'.format(el) for el in task_accs])
                 print('Trained Tasks Mean:', np.mean(off_task_accs), '\n')
 
-                if np.mean(off_task_accs) > 0.95:
+                if False and np.mean(off_task_accs) > 0.95:
                     #if i == par['n_train_batches'] - 1:
                     pickle.dump(task_states, open('./savedir/states_{}.pkl'.format(save_fn), 'wb'))
                     #print('Saving states and exiting loop.')

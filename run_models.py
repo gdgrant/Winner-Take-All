@@ -134,17 +134,17 @@ def interleaved():
 def two_tasks():
 
     task = 'go_antigo'
-    update_parameters({'task':task, 'n_tasks':2, 'savetype':10, 'n_hidden':250, 'top_k_neurons':50})
+    update_parameters({'task':task, 'n_tasks':2, 'n_hidden':250, 'top_k_neurons':50})
     update_parameters(BIO_params)
 
     save_fn = task + '_analysis_multistim_BIO'
-    update_parameters({'load_from_checkpoint':False, 'weight_cost':0., 'do_k_shot_testing':False})
+    update_parameters({'load_from_checkpoint':False, 'do_k_shot_testing':False})
 
-    #update_parameters(with_WTA_params)
-    #try_model(save_fn+'_with_WTA_v0')
+    update_parameters(with_WTA_params)
+    try_model(save_fn+'_with_WTA_v0')
 
-    update_parameters(without_WTA_params)
-    try_model(save_fn+'_without_WTA_v0')
+    #update_parameters(without_WTA_params)
+    #try_model(save_fn+'_without_WTA_v0')
 
 
 def six_tasks():
@@ -190,6 +190,6 @@ def expanded_go_tasks():
 #multistim_LSTM()
 #kshot_testing_multistim_LSTM()
 #interleaved()
-#two_tasks()
+two_tasks()
 #six_tasks()
-expanded_go_tasks()
+#expanded_go_tasks()

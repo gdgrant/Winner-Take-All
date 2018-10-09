@@ -1,9 +1,25 @@
 import numpy as np
 from parameters import *
-import model as base_model
+import model
 import sys, os
 import pickle
 
+if len(sys.argv) > 1:
+    GPU_ID = sys.argv[1]
+    os.environ['CUDA_VISIBLE_DEVICES'] = GPU_ID
+else:
+    GPU_ID = None
+    os.environ['CUDA_VISIBLE_DEVICES'] = ''
+
+def load_and_replace_parameters(filename):
+
+    data = pickle.load(open(filename, 'rb'))
+    data['parameters']['save_fn'] = 'analysis_run_' + filename
+
+    data['parameters']['weight_load_fn'] = filename
+    data['parameters']['load_prev_weights'] = True
+
+    update_parameters(data['parameters'])
 
 def try_model(save_fn):
     # To use a GPU, from command line do: python model.py <gpu_integer_id>

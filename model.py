@@ -599,6 +599,9 @@ def supervised_learning(save_fn='test.pkl', gpu_id=None):
                     print(np.array2string(np.round(out_correlations, 2), max_line_width=np.inf))
                     print('\n')
 
+        print('Saving weights...')
+        pickle.dump(sess.run(model.var_dict), open('./weights/weights_for_'+save_fn+'.pkl', 'wb'))
+        print('Weights saved.')
 
         if par['do_k_shot_testing']:
 

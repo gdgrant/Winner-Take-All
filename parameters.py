@@ -51,7 +51,7 @@ par = {
     # Timings and rates
     'dt'                    : 20,
     'learning_rate'         : 1e-3,
-    'membrane_time_constant': 40,
+    'membrane_time_constant': 50,
     'connection_prob'       : 1.0,
     'discount_rate'         : 0.,
 

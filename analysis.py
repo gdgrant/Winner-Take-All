@@ -3,6 +3,10 @@ import tensorflow as tf
 from parameters import *
 import sys, os
 import pickle
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
 
 if len(sys.argv) > 1:
     GPU_ID = sys.argv[1]
@@ -93,9 +97,12 @@ def lesioning_analysis():
 
     fig, ax = plt.subplots(1,1, figsize=(8,8))
     ax.grid()
-    ax.scatter(lesions[:,0]-accs[0], lesions[:,1]-accs[1])
+    ax.scatter(lesions[:,0]-accs[0], lesions[:,1]-accs[1], s=3, c='r')
     ax.set_xlabel('$\\Delta$ Acc Task 0')
     ax.set_ylabel('$\\Delta$ Acc Task 1')
     ax.set_title('Changes in Accuracy after Lesioning Single Neurons')
 
-    plt.savefig('lesioning.png')
+    plt.savefig('./records/lesioning.png')
+
+
+lesioning_analysis()

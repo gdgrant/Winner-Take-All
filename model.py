@@ -24,7 +24,7 @@ class Model:
 
     """ RNN model for supervised and reinforcement learning training """
 
-    def __init__(self, input_data, target_data, mask, gating, trial_mask):
+    def __init__(self, input_data, target_data, mask, gating, trial_mask, lesion_id):
 
         # Load input activity, target data, training mask, etc.
         self.input_data         = tf.unstack(input_data, axis=0)
@@ -32,6 +32,7 @@ class Model:
         self.gating             = tf.reshape(gating, [1,-1])
         self.time_mask          = tf.unstack(mask, axis=0)
         self.trial_mask         = trial_mask
+        self.lesion_id          = lesion_id
 
         # Declare all Tensorflow variables
         self.declare_variables()
@@ -76,6 +77,10 @@ class Model:
                 if par['EI'] else self.var_dict['W_rnn']
 
         self.var_dict['h_init'] = tf.get_variable('h_init', initializer=par['h_init'], trainable=True)
+
+        lesion_a = tf.assign(self.var_dict['W_rnn'][:,self.lesion_id], tf.zeros_like(self.var_dict['W_rnn'][:,self.lesion_id]))
+        lesion_b = tf.assign(self.var_dict['W_rnn'][self.lesion_id,:], tf.zeros_like(self.var_dict['W_rnn'][self.lesion_id,:]))
+        self.lesion_neuron = tf.group([lesion_a, lesion_b])
 
 
     def rnn_cell_loop(self):
@@ -457,12 +462,7 @@ def supervised_learning(save_fn='test.pkl', gpu_id=None):
     tf.reset_default_graph()
 
     # Define all placeholders
-    x = tf.placeholder(tf.float32, [par['num_time_steps'], par['batch_size'], par['n_input']], 'stim')
-    y = tf.placeholder(tf.float32, [par['num_time_steps'], par['batch_size'], par['n_output']], 'out')
-    m = tf.placeholder(tf.float32, [par['num_time_steps'], par['batch_size']], 'mask')
-    g = tf.placeholder(tf.float32, [par['n_hidden']], 'gating')
-
-    trial_mask = tf.placeholder_with_default(np.float32(np.ones([par['batch_size'],1])), [par['batch_size'],1], 'trial_mask')
+    x, y, m, g, trial_mask, lid = get_supervised_placeholders()
 
     # Set up stimulus and accuracy recording
     stim = stimulus.MultiStimulus()
@@ -481,7 +481,7 @@ def supervised_learning(save_fn='test.pkl', gpu_id=None):
         # Select CPU or GPU
         device = '/cpu:0' if gpu_id is None else '/gpu:0'
         with tf.device(device):
-            model = Model(x, y, m, g, trial_mask)
+            model = Model(x, y, m, g, trial_mask, lid)
 
         # Initialize variables and start the timer
         saver = tf.train.Saver(max_to_keep=100)
@@ -599,9 +599,9 @@ def supervised_learning(save_fn='test.pkl', gpu_id=None):
                     print(np.array2string(np.round(out_correlations, 2), max_line_width=np.inf))
                     print('\n')
 
-        print('Saving weights...')
-        pickle.dump(sess.run(model.var_dict), open('./weights/weights_for_'+save_fn+'.pkl', 'wb'))
-        print('Weights saved.')
+        print('Saving parameters and weights...')
+        pickle.dump({'parameters':par, 'weights':sess.run(model.var_dict)}, open('./weights/weights_for_'+save_fn+'.pkl', 'wb'))
+        print('Parameters and weights saved.')
 
         if par['do_k_shot_testing']:
 
@@ -847,6 +847,17 @@ def append_model_performance(model_performance, reward, entropy_loss, pol_loss, 
     model_performance['trial'].append(trial_num)
 
     return model_performance
+
+
+def get_supervised_placeholders():
+    x = tf.placeholder(tf.float32, [par['num_time_steps'], par['batch_size'], par['n_input']], 'stim')
+    y = tf.placeholder(tf.float32, [par['num_time_steps'], par['batch_size'], par['n_output']], 'out')
+    m = tf.placeholder(tf.float32, [par['num_time_steps'], par['batch_size']], 'mask')
+    g = tf.placeholder(tf.float32, [par['n_hidden']], 'gating')
+    trial_mask = tf.placeholder_with_default(np.float32(np.ones([par['batch_size'],1])), [par['batch_size'],1], 'trial_mask')
+    lid = tf.placeholder_with_default(np.int32(0), [], 'lid')
+
+    return x, y, m, g, trial_mask, lid
 
 
 def generate_placeholders():

@@ -1,6 +1,6 @@
 import numpy as np
+import tensorflow as tf
 from parameters import *
-import model
 import sys, os
 import pickle
 
@@ -11,41 +11,91 @@ else:
     GPU_ID = None
     os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
+
 def load_and_replace_parameters(filename):
+    """ Load parameters from file and plug them into par """
 
     data = pickle.load(open(filename, 'rb'))
-    data['parameters']['save_fn'] = 'analysis_run_' + filename
+    data['parameters']['save_fn'] = filename[:-4] + 'analysis_run.pkl'
 
     data['parameters']['weight_load_fn'] = filename
-    data['parameters']['load_prev_weights'] = True
+    data['parameters']['load_weights'] = True
 
-    update_parameters(data['parameters'])
-
-def try_model(save_fn):
-    # To use a GPU, from command line do: python model.py <gpu_integer_id>
-    # To use CPU, just don't put a gpu id: python model.py
-    try:
-        if len(sys.argv) > 1:
-            return base_model.main(save_fn, sys.argv[1])
-        else:
-            return base_model.main(save_fn)
-    except KeyboardInterrupt:
-        quit('Quit by KeyboardInterrupt.')
+    update_parameters(data['parameters'], quiet=True)
+    data['parameters'] = par
+    return data, data['parameters']['save_fn']
 
 
-def two_tasks():
+def load_tensorflow_model():
+    """ Start the TensorFlow session and build the analysis model """
 
-    task = 'go_antigo'
-    update_parameters({'task':task, 'n_tasks':2, 'savetype':10, 'n_hidden':250, 'top_k_neurons':50})
-    update_parameters({'architecture':'BIO', 'n_train_batches':501, 'synapse_config':'std_stf'})
+    import model
 
-    save_fn = task + '_analysis_multistim_BIO'
-    update_parameters({'load_from_checkpoint':False, 'weight_cost':0., 'do_k_shot_testing':False})
+    tf.reset_default_graph()
+    x, y, m, g, trial_mask, lid = model.get_supervised_placeholders()
+    if GPU_ID is not None:
+        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
+        sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
+        device = '/gpu:0'
+    else:
+        sess = tf.Session()
+        device = '/cpu:0'
 
-    update_parameters({'winner_take_all':True})
-    return try_model(save_fn+'_with_WTA_v0')
+    with tf.device(device):
+        mod = model.Model(x, y, m, g, trial_mask, lid)
+
+    load_model_weights(sess)
+
+    return model, sess, mod, x, y, m, g, trial_mask, lid
 
 
-sess, model, stim, x, y, m, g = two_tasks()
+def load_model_weights(sess):
+    """ Load (or reload) TensorFlow weights """
+    sess.run(tf.global_variables_initializer())
 
-print(np.array(sess.run(model.h)).shape)
+
+def network_lesioning(filename):
+    """ Lesion individual neurons for linking with gating patterns """
+
+    results, savefile = load_and_replace_parameters(filename)
+    model_module, sess, model, x, y, m, g, trial_mask, lid = load_tensorflow_model()
+
+    lesioning_results = np.zeros([par['n_hidden'], par['n_tasks']])
+    base_accuracies = np.zeros([par['n_tasks']])
+
+    import stimulus
+    stim = stimulus.MultiStimulus()
+
+    for task in range(par['n_tasks']):
+
+        _, stim_in, y_hat, mk, _ = stim.generate_trial(task)
+        feed_dict = {x:stim_in, y:y_hat, g:par['gating'][0], m:mk}
+
+        output = sess.run(model.output, feed_dict=feed_dict)
+        acc = model_module.get_perf(y_hat, output, mk)
+
+        print('\n'+'-'*60)
+        print('Base accuracy for task {}: {}'.format(task, acc))
+        base_accuracies[task] = acc
+
+        for n in range(par['n_hidden']):
+            print('Lesioning neuron {}/{}'.format(n, par['n_hidden']), end='\r')
+            sess.run(model.lesion_neuron, feed_dict={lid:n})
+            lesioning_results[n,task] = model_module.get_perf(y_hat, sess.run(model.output, feed_dict=feed_dict), mk)
+            load_model_weights(sess)
+
+    return base_accuracies, lesioning_results
+
+
+def lesioning_analysis():
+
+    accs, lesions = network_lesioning('./weights/weights_for_go_antigo_analysis_multistim_BIO_with_WTA_v0.pkl')
+
+    fig, ax = plt.subplots(1,1, figsize=(8,8))
+    ax.grid()
+    ax.scatter(lesions[:,0]-accs[0], lesions[:,1]-accs[1])
+    ax.set_xlabel('$\\Delta$ Acc Task 0')
+    ax.set_ylabel('$\\Delta$ Acc Task 1')
+    ax.set_title('Changes in Accuracy after Lesioning Single Neurons')
+
+    plt.savefig('lesioning.png')

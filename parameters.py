@@ -1,7 +1,7 @@
 ### Authors: Nicolas Y. Masse, Gregory D. Grant
 
 import numpy as np
-from itertools import product, chain
+import pickle
 
 print("\n--> Loading parameters...")
 
@@ -16,6 +16,7 @@ par = {
     'stabilization'         : 'pathint',    # 'EWC' (Kirkpatrick method) or 'pathint' (Zenke method)
     'save_analysis'         : False,
     'reset_weights'         : False,        # reset weights between tasks
+    'load_weights'          : False,
 
     # Network configuration
     'synapse_config'        : 'std_stf',     # Full is 'std_stf'
@@ -114,14 +115,17 @@ par = {
 ############################
 
 
-def update_parameters(updates):
+def update_parameters(updates, quiet=False):
     """
     Takes a list of strings and values for updating parameters in the parameter dictionary
     Example: updates = [(key, val), (key, val)]
     """
+    if quiet:
+        print('Updating parameters...')
     for (key, val) in updates.items():
         par[key] = val
-        print('Updating : ', key, ' -> ', val)
+        if not quiet:
+            print('Updating : ', key, ' -> ', val)
     update_dependencies()
 
 
@@ -305,6 +309,20 @@ def update_dependencies():
     par['U'] = np.transpose(par['U'])
     par['syn_x_init'] = np.transpose(par['syn_x_init'])
     par['syn_u_init'] = np.transpose(par['syn_u_init'])
+
+    if par['load_weights']:
+        load_weights()
+
+
+def load_weights():
+
+    print('Updating weights...')
+    data = pickle.load(open(par['weight_load_fn'], 'rb'))['weights']
+    for k in data.keys():
+        if k != 'h_init':
+            par[k+'_init'] = data[k]
+        else:
+            par[k] = data[k]
 
 
 def gen_gating():

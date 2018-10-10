@@ -78,10 +78,8 @@ class Model:
 
         self.var_dict['h_init'] = tf.get_variable('h_init', initializer=par['h_init'], trainable=True)
 
-        if par['architecture'] == 'BIO':
-            lesion_a = tf.assign(self.var_dict['W_rnn'][:,self.lesion_id], tf.zeros_like(self.var_dict['W_rnn'][:,self.lesion_id]))
-            lesion_b = tf.assign(self.var_dict['W_rnn'][self.lesion_id,:], tf.zeros_like(self.var_dict['W_rnn'][self.lesion_id,:]))
-            self.lesion_neuron = tf.group([lesion_a, lesion_b])
+        self.lesion_gate = tf.get_variable('lesion_gate', initializer=np.float32(np.ones([1,par['n_hidden']])), trainable=False)
+        self.lesion_neuron = tf.assign(self.lesion_gate[:,lid], tf.zeros_like(self.lesion_gate)[:,lid])
 
 
     def rnn_cell_loop(self):
@@ -200,6 +198,9 @@ class Model:
             h = self.gating * o * tf.tanh(c)
             syn_x = tf.constant(-1.)
             syn_u = tf.constant(-1.)
+
+        # Apply lesioning as specified prior
+        h *= self.lesion_gate
 
         # Select top neurons
         if par['winner_take_all']:

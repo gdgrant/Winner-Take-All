@@ -78,10 +78,8 @@ class Model:
 
         self.var_dict['h_init'] = tf.get_variable('h_init', initializer=par['h_init'], trainable=True)
 
-        if par['architecture'] == 'BIO':
-            lesion_a = tf.assign(self.var_dict['W_rnn'][:,self.lesion_id], tf.zeros_like(self.var_dict['W_rnn'][:,self.lesion_id]))
-            lesion_b = tf.assign(self.var_dict['W_rnn'][self.lesion_id,:], tf.zeros_like(self.var_dict['W_rnn'][self.lesion_id,:]))
-            self.lesion_neuron = tf.group([lesion_a, lesion_b])
+        self.lesion_gate = tf.get_variable('lesion_gate', initializer=np.float32(np.ones([1,par['n_hidden']])), trainable=False)
+        self.lesion_neuron = tf.assign(self.lesion_gate[:,self.lesion_id], tf.zeros_like(self.lesion_gate)[:,self.lesion_id])
 
 
     def rnn_cell_loop(self):
@@ -201,9 +199,12 @@ class Model:
             syn_x = tf.constant(-1.)
             syn_u = tf.constant(-1.)
 
+        # Apply lesioning as specified prior
+        h *= self.lesion_gate
+
         # Select top neurons
         if par['winner_take_all']:
-            top_k, _ = tf.nn.top_k(tf.abs(h), par['top_k_neurons'])
+            top_k, _ = tf.nn.top_k(h, par['top_k_neurons'])
             drop = tf.where(h < top_k[:,par['top_k_neurons']-1:par['top_k_neurons']], tf.zeros(h.shape, tf.float32), tf.ones(h.shape, tf.float32))
             return drop*h, c, syn_x, syn_u
         else:
@@ -222,6 +223,7 @@ class Model:
         self.big_omega_var = {}
         reset_prev_vars_ops = []
         aux_losses = []
+        big_omega_var_resets = []
 
         # Set up stabilization based on trainable variables
         for var in tf.trainable_variables():
@@ -238,6 +240,9 @@ class Model:
 
             # Make a reset function for each prev_weight element
             reset_prev_vars_ops.append(tf.assign(self.prev_weights[n], var))
+
+            # Make a reset function for big_omega_var
+            big_omega_var_resets.append(tf.assign(self.big_omega_var[n], tf.zeros_like(self.big_omega_var[n])))
 
         # Auxiliary stabilization loss
         self.aux_loss = tf.add_n(aux_losses)
@@ -325,6 +330,7 @@ class Model:
             pass
 
         # Make reset operations
+        self.reset_big_omega_vars = tf.group(*big_omega_var_resets)
         self.reset_prev_vars = tf.group(*reset_prev_vars_ops)
         self.reset_adam_op = adam_optimizer.reset_params()
         self.reset_weights()

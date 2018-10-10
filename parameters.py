@@ -27,7 +27,7 @@ par = {
     'architecture'          : 'BIO',       # 'BIO', 'LSTM'
     'weight_distribution'   : 'gamma',
     'c_gamma'               : 0.025,
-    'c_input_gamma'         : 0.2,
+    'c_input_gamma'         : 0.1,
 
     # Network shape
     'num_motion_tuned'      : 48,   # 64

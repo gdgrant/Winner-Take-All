@@ -95,26 +95,29 @@ def multistim_LSTM():
         try_model(save_fn+'_without_WTA_v{}'.format(j))
 
 
-def kshot_testing_multistim_LSTM():
+def kshot_testing_multistim_LSTM(with_WTA=True):
 
     print('Running kshot testing.')
 
     # Multistim task, LSTM network
     update_parameters(multistim_params)
     update_parameters(LSTM_params)
+    update_parameters({'n_train_batches':50001,'use_threshold':True})
+    update_parameters({'do_k_shot_testing':True,'load_from_checkpoint':False})
 
-    for task in range(3,par['n_tasks'],2):
-        update_parameters({'load_from_checkpoint':False})
-        update_parameters({'weight_cost':1.})
+    for task in range(par['n_tasks']):
+        update_parameters({'k_shot_task':task})
+        save_fn = 'kshot_task{}_multistim_LSTM'.format(task)
 
-        update_parameters({'k_shot_task':task, 'n_train_batches':50001})
-        save_fn = 'higher_weight_cost_kshot_task{}_multistim_LSTM'.format(task)
         for j in range(1):
-            update_parameters(with_WTA_params)
-            try_model(save_fn+'_with_WTA_v{}'.format(j))
-
-            update_parameters(without_WTA_params)
-            try_model(save_fn+'_without_WTA_v{}'.format(j))
+            if with_WTA:
+                update_parameters({'c_gamma':0.05})
+                update_parameters(with_WTA_params)
+                try_model(save_fn+'_with_WTA_v{}'.format(j))
+            else:
+                update_parameters({'c_gamma':0.01})
+                update_parameters(without_WTA_params)
+                try_model(save_fn+'_without_WTA_v{}'.format(j))
 
 def interleaved():
 
@@ -190,23 +193,24 @@ def gamma_c_BIO_sweep():
     update_parameters({'n_train_batches':4001})
 
     gamma_cs = [0.01, 0.02, 0.05, 0.1, 0.2]
-    for j in range(5):
+    for j in range(10,15):
         for c in range(5):
             update_parameters({'gamma_c':gamma_cs[c]})
 
-            update_parameters(with_WTA_params)
-            try_model(save_fn+'_with_WTA_c{}_v{}'.format(c, j))
+            #update_parameters(with_WTA_params)
+            #try_model(save_fn+'_with_WTA_c{}_v{}'.format(c, j))
 
-            #update_parameters(without_WTA_params)
-            #try_model(save_fn+'_without_WTA_v{}'.format(j))
+            update_parameters(without_WTA_params)
+            try_model(save_fn+'_without_WTA_c{}_v{}'.format(c, j))
 
 ####
 
 #go_BIO()
 #go_LSTM()
-gamma_c_BIO_sweep()
+#gamma_c_BIO_sweep()
 #multistim_LSTM()
-#kshot_testing_multistim_LSTM()
+kshot_testing_multistim_LSTM(with_WTA=True)
+kshot_testing_multistim_LSTM(with_WTA=False)
 #interleaved()
 #two_tasks()
 #six_tasks()

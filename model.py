@@ -204,7 +204,7 @@ class Model:
 
         # Select top neurons
         if par['winner_take_all']:
-            top_k, _ = tf.nn.top_k(tf.abs(h), par['top_k_neurons'])
+            top_k, _ = tf.nn.top_k(h, par['top_k_neurons'])
             drop = tf.where(h < top_k[:,par['top_k_neurons']-1:par['top_k_neurons']], tf.zeros(h.shape, tf.float32), tf.ones(h.shape, tf.float32))
             return drop*h, c, syn_x, syn_u
         else:

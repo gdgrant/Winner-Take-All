@@ -1,17 +1,17 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import tensorflow as tf
 
-import stimulus
+tf.reset_default_graph()
 
-s = stimulus.MultiStimulus()
+lid = tf.placeholder(tf.int32, [], 'lid')
+gate = tf.get_variable('lesion', initializer=np.float32(np.ones([1,20])), trainable=False)
+make = tf.assign(gate[:,lid], tf.zeros_like(gate)[:,lid])
 
-
-_, stim, hat, mk, _ = s.generate_trial(0)
-
-for b in range(16):
-    fig, ax = plt.subplots(1,3)
-    ax[0].imshow(stim[:,b,:], aspect='auto')
-    ax[1].imshow(hat[:,b,:], aspect='auto')
-    ax[2].imshow(mk[:,b,np.newaxis], aspect='auto')
-
-    plt.show()
+with tf.Session() as sess:
+    for i in range(20):
+        print('Lesioning neuron {}:'.format(i))
+        sess.run(tf.global_variables_initializer())
+        print(np.int8(sess.run(gate)))
+        sess.run(make, feed_dict={lid:i})
+        print(np.int8(sess.run(gate)))

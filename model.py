@@ -433,23 +433,51 @@ class Model:
         fisher_ops = []
         opt = tf.train.GradientDescentOptimizer(learning_rate = 1.0)
 
-        # Sample from logits
-        if par['training_method'] == 'RL':
-            log_p_theta = tf.stack([mask*time_mask*action*tf.log(epsilon + pol_out) for (pol_out, action, mask, time_mask) in \
-                zip(self.pol_out, self.action, self.mask, self.time_mask)], axis = 0)
-        elif par['training_method'] == 'SL':
-            log_p_theta = tf.stack([mask*time_mask*tf.log(epsilon + output) for (output, mask, time_mask) in \
-                zip(self.output, self.mask, self.time_mask)], axis = 0)
+        # Sample label from logits
+        # if par['training_method'] == 'RL':
+        #     log_p_theta = tf.stack([mask*time_mask*action*tf.log(epsilon + pol_out) for (pol_out, action, mask, time_mask) in \
+        #         zip(self.pol_out, self.action, self.mask, self.time_mask)], axis = 0)
+        # elif par['training_method'] == 'SL':
+        #     log_p_theta = tf.stack([mask*time_mask*tf.log(epsilon + output) for (output, mask, time_mask) in \
+        #         zip(self.output, self.mask, self.time_mask)], axis = 0)
+        
+        # NEWEST version from Context-Dependent-Gating
+        p_theta = tf.nn.softmax(self.y, dim = 1)
+        class_ind_one_hot = tf.cast(tf.squeeze(tf.one_hot(tf.multinomial(self.y, 1), par['layer_dims'][-1])), tf.float32)
+        log_p_theta = tf.unstack(class_ind_one_hot*tf.log(p_theta + epsilon), axis = 0)
 
-        # Compute gradients and add to aggregate
-        grads_and_vars = opt.compute_gradients(log_p_theta, var_list = var_list)
-        for grad, var in grads_and_vars:
-            print(var.op.name)
-            fisher_ops.append(tf.assign_add(self.big_omega_var[var.op.name], \
-                grad*grad/par['EWC_fisher_num_batches']))
+        # Iterate over the variables to get gradient shapes
+        grad_dict = {}
+        for var in self.variables_stabilization:
+            grad_dict[var.op.name] = tf.zeros_like(var)
+
+        # Iterate over the available batches to generate EWC samples
+        # Note:  par['batch_size']//n should not be greater than ~150
+        #        If this limit is reached, divide by a larger number and run
+        #        more EWC batches to maintain both GPU memory requirements
+        #        and network performance
+        for i in range(par['batch_size']//par['EWC_batch_divisor']):
+
+            # Compute gradients for each sample
+            for grad, var in opt.compute_gradients(log_p_theta[i], var_list = self.variables_stabilization):
+
+                # Aggregate gradients
+                grad_dict[var.op.name] += tf.square(grad)/par['batch_size']/par['EWC_fisher_num_batches']
+
+        # Iterate over the variables to assign values to the Fisher operations
+        for var in self.variables_stabilization:
+            fisher_ops.append(tf.assign_add(self.big_omega_var[var.op.name], grad_dict[var.op.name]))
 
         # Make update group
         self.update_big_omega = tf.group(*fisher_ops)
+
+        # OLD CODE
+        # Compute gradients and add to aggregate
+        # grads_and_vars = opt.compute_gradients(log_p_theta, var_list = var_list)
+        # for grad, var in grads_and_vars:
+        #     print(var.op.name)
+        #     fisher_ops.append(tf.assign_add(self.big_omega_var[var.op.name], \
+        #         grad*grad/par['EWC_fisher_num_batches']))
 
 
 def supervised_learning(save_fn='test.pkl', gpu_id=None):

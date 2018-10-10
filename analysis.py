@@ -93,7 +93,7 @@ def network_lesioning(filename):
 
 def lesioning_analysis():
 
-    accs, lesions = network_lesioning('./weights/weights_for_go_antigo_analysis_multistim_BIO_with_WTA_v0.pkl')
+    accs, lesions = network_lesioning('./LSTM_multi_task/weights/weights_for_multistim_LSTM_with_WTA_gamma0_v0.pkl')
 
     fig, ax = plt.subplots(1,1, figsize=(8,8))
     ax.grid()
@@ -104,5 +104,30 @@ def lesioning_analysis():
 
     plt.savefig('./records/lesioning.png')
 
+
+def EWC_analysis(filename):
+    """ Lesion individual neurons for linking with gating patterns """
+
+    results, savefile = load_and_replace_parameters(filename)
+    update_parameters({'stabilization': 'EWC'})
+
+    model_module, sess, model, x, y, m, g, trial_mask, lid = load_tensorflow_model()
+    EWC_results = np.zeros(par['n_tasks'])
+
+    import stimulus
+    stim = stimulus.MultiStimulus()
+
+    for task in range(par['n_tasks']):
+        sess.run(model.reset_big_omega_vars)
+
+        for n in range(par['EWC_fisher_num_batches']):
+            name, input_data, _, mk, reward_data = stim.generate_trial(task)
+            mk = mk[..., np.newaxis]
+            _, big_omegas = sess.run([model.update_big_omega,model.big_omega_var], feed_dict = \
+                {x:input_data, target:reward_data, gating:par['gating'][0], mask:mk})
+
+        EWC_results[task] = big_omegas
+
+    return EWC_results
 
 lesioning_analysis()

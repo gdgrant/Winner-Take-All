@@ -79,7 +79,7 @@ class Model:
         self.var_dict['h_init'] = tf.get_variable('h_init', initializer=par['h_init'], trainable=True)
 
         self.lesion_gate = tf.get_variable('lesion_gate', initializer=np.float32(np.ones([1,par['n_hidden']])), trainable=False)
-        self.lesion_neuron = tf.assign(self.lesion_gate[:,lid], tf.zeros_like(self.lesion_gate)[:,lid])
+        self.lesion_neuron = tf.assign(self.lesion_gate[:,self.lesion_id], tf.zeros_like(self.lesion_gate)[:,self.lesion_id])
 
 
     def rnn_cell_loop(self):

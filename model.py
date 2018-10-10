@@ -223,6 +223,7 @@ class Model:
         self.big_omega_var = {}
         reset_prev_vars_ops = []
         aux_losses = []
+        big_omega_var_resets = []
 
         # Set up stabilization based on trainable variables
         for var in tf.trainable_variables():
@@ -239,6 +240,9 @@ class Model:
 
             # Make a reset function for each prev_weight element
             reset_prev_vars_ops.append(tf.assign(self.prev_weights[n], var))
+
+            # Make a reset function for big_omega_var
+            big_omega_var_resets.append(tf.assign(self.big_omega_var[n], tf.zeros_like(self.big_omega_var[n])))
 
         # Auxiliary stabilization loss
         self.aux_loss = tf.add_n(aux_losses)
@@ -326,6 +330,7 @@ class Model:
             pass
 
         # Make reset operations
+        self.reset_big_omega_vars = tf.group(*big_omega_var_resets)
         self.reset_prev_vars = tf.group(*reset_prev_vars_ops)
         self.reset_adam_op = adam_optimizer.reset_params()
         self.reset_weights()

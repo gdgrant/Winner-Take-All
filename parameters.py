@@ -27,6 +27,7 @@ par = {
     'architecture'          : 'BIO',       # 'BIO', 'LSTM'
     'weight_distribution'   : 'gamma',
     'c_gamma'               : 0.025,
+    'c_input_gamma'         : 0.2,
 
     # Network shape
     'num_motion_tuned'      : 48,   # 64
@@ -41,8 +42,9 @@ par = {
     'top_k_neurons'         : 100,
 
     # k-shot testing setup
-    'do_k_shot_testing'     : True,
+    'do_k_shot_testing'     : False,
     'load_from_checkpoint'  : False,
+    'use_threshold'         : False,
     'k_shot_task'           : 6,
     'num_shots'             : 5,
     'testing_iters'         : 50,
@@ -190,11 +192,10 @@ def update_dependencies():
 
     # Initialize weights
     c_uniform = 0.05
-    par['c_gamma']
     conn = np.float32(np.random.rand(par['n_input'], par['n_hidden']) > 0.5)
 
     if par['weight_distribution'] == 'gamma':
-        par['W_in_init'] = conn*np.float32(np.random.gamma(shape = par['c_gamma'], scale=1.0, size = [par['n_input'], par['n_hidden']]))
+        par['W_in_init'] = conn*np.float32(np.random.gamma(shape = par['c_input_gamma'], scale=1.0, size = [par['n_input'], par['n_hidden']]))
     elif par['weight_distribution'] == 'uniform':
         par['W_in_init'] = conn*np.float32(np.random.uniform(low = -c_uniform, high=c_uniform, size=[par['n_input'], par['n_hidden']]))
 

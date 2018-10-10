@@ -48,8 +48,33 @@ def gating_patterns(task='go_antigo'):
     plt.show()
 
 
+def plot_gamma_sweep():
+
+    fns = [fn for fn in os.listdir('./savedir/') if 'gamma' in fn and not 'kshot_accuracy' in fn and 'v0' in fn]
+    withs = [fn for fn in fns if 'with_' in fn]
+    withouts = [fn for fn in fns if 'without_' in fn]
+
+    plt.grid()
+
+    colors = ['maroon', 'firebrick', 'chocolate', 'orange', 'gold']
+    for i, (c, w) in enumerate(zip(colors, sorted(withs))):
+        print(w)
+        w = np.array(pickle.load(open('./savedir/'+w, 'rb')))
+        print(w[400,:])
+        plt.plot(np.mean(w, axis=1), c=c, label='with, c{}'.format(i))
+
+    print('')
+    colors = ['darkblue', 'b', 'blueviolet', 'darkviolet', 'darkmagenta']
+    for i, (c, w) in enumerate(zip(colors, sorted(withouts))):
+        print(w)
+        w = np.array(pickle.load(open('./savedir/'+w, 'rb')))
+        print(w[400,:])
+        plt.plot(np.mean(w, axis=1), c=c, label='without, c{}'.format(i))
+
+    plt.legend()
+    plt.ylim(0,1)
+    plt.xlim(0,400)
+    plt.show()
 
 
-
-
-gating_patterns()
+plot_gamma_sweep()

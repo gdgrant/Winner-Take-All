@@ -562,47 +562,14 @@ def supervised_learning(save_fn='test.pkl', gpu_id=None):
                 print('Task accuracies:', *['| {:5.3f}'.format(el) for el in task_accs])
                 print('Trained Tasks Mean:', np.mean(off_task_accs), '\n')
 
-                if False and np.mean(off_task_accs) > 0.95:
-                    #if i == par['n_train_batches'] - 1:
-                    pickle.dump(task_states, open('./savedir/states_{}.pkl'.format(save_fn), 'wb'))
-                    #print('Saving states and exiting loop.')
+                if par['use_threshold'] and np.mean(off_task_accs) > 0.95:
                     print('Trained tasks 95\% accuracy threshold reached.')
                     break
 
-                if False:
-
-                    rnn_correlations = np.zeros([par['n_tasks'], par['n_tasks']])
-                    out_correlations = np.zeros([par['n_tasks'], par['n_tasks']])
-                    for t0 in range(par['n_tasks']):
-                        for t1 in range(t0,par['n_tasks']):
-
-                            for (grad_t0, _), (grad_t1, _) in zip(task_grads[t0], task_grads[t1]):
-                                if grad_t0.shape == (par['n_hidden'], par['n_hidden']):
-                                    rnn_correlations[t0,t1] = scipy.stats.pearsonr(grad_t0.flatten(), grad_t1.flatten())[0]
-                                elif grad_t0.shape == (par['n_hidden'], par['n_output']):
-                                    out_correlations[t0,t1] = scipy.stats.pearsonr(grad_t0.flatten(), grad_t1.flatten())[0]
-
-                    if par['task'] == 'go_tasks':
-                        save_data = {}
-                        save_data['notes'] = 'Each item is a list of that data across the trained tasks, in order.'
-                        save_data['task_performance'] = task_accs
-                        save_data['task_gradients'] = [[gvp[0] for gvp in this_task] for this_task in task_grads]
-                        save_data['task_hidden_states'] = task_states
-                        save_data['grad_correlations'] = {'rnn':rnn_correlations, 'out':out_correlations}
-                        save_data['parameters'] = par
-                        pickle.dump(save_data, open('./savedir/savedata_{}_iter{}.pkl'.format(save_fn, i), 'wb'))
-
-                    print('\nGradient correlations between tasks (W_rnn):')
-                    print(np.array2string(np.round(rnn_correlations, 2), max_line_width=np.inf))
-                    print('')
-
-                    print('Gradient correlations between tasks (W_out):')
-                    print(np.array2string(np.round(out_correlations, 2), max_line_width=np.inf))
-                    print('\n')
-
-        print('Saving parameters and weights...')
+        print('Saving states, parameters, and weights...')
+        pickle.dump(task_states, open('./savedir/states_{}.pkl'.format(save_fn), 'wb'))
         pickle.dump({'parameters':par, 'weights':sess.run(model.var_dict)}, open('./weights/weights_for_'+save_fn+'.pkl', 'wb'))
-        print('Parameters and weights saved.')
+        print('States, parameters, and weights saved.')
 
         if par['do_k_shot_testing']:
 

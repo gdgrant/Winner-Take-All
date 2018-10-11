@@ -27,7 +27,8 @@ par = {
     'architecture'          : 'BIO',       # 'BIO', 'LSTM'
     'weight_distribution'   : 'gamma',
     'c_gamma'               : 0.025,
-    'c_input_gamma'         : 0.1,
+    'c_input_gamma'         : 0.05,
+    'c_uniform'             : 0.1,
 
     # Network shape
     'num_motion_tuned'      : 48,   # 64
@@ -47,7 +48,7 @@ par = {
     'use_threshold'         : False,
     'k_shot_task'           : 6,
     'num_shots'             : 5,
-    'testing_iters'         : 50,
+    'testing_iters'         : 10,
     'shot_reps'             : 50,
 
     # Timings and rates
@@ -191,13 +192,12 @@ def update_dependencies():
     par['h_init'] = 0.1*np.ones((par['batch_size'], par['n_hidden']), dtype=np.float32)
 
     # Initialize weights
-    c_uniform = 0.05
     conn = np.float32(np.random.rand(par['n_input'], par['n_hidden']) > 0.5)
 
     if par['weight_distribution'] == 'gamma':
         par['W_in_init'] = conn*np.float32(np.random.gamma(shape = par['c_input_gamma'], scale=1.0, size = [par['n_input'], par['n_hidden']]))
     elif par['weight_distribution'] == 'uniform':
-        par['W_in_init'] = conn*np.float32(np.random.uniform(low = -c_uniform, high=c_uniform, size=[par['n_input'], par['n_hidden']]))
+        par['W_in_init'] = conn*np.float32(np.random.uniform(low = -par['c_uniform'], high=par['c_uniform'], size=[par['n_input'], par['n_hidden']]))
 
     par['W_out_init'] = np.float32(np.random.gamma(shape=0.2, scale=1.0, size = [par['n_hidden'], par['n_output']]))
 
@@ -205,7 +205,7 @@ def update_dependencies():
         if par['weight_distribution'] == 'gamma':
             par['W_rnn_init'] = np.float32(np.random.gamma(shape = par['c_gamma'], scale=1.0, size = [par['n_hidden'], par['n_hidden']]))
         elif par['weight_distribution'] == 'uniform':
-            par['W_rnn_init'] = np.float32(np.random.uniform(low = -c_uniform, high = c_uniform, size=[par['n_hidden'], par['n_hidden']]))
+            par['W_rnn_init'] = np.float32(np.random.uniform(low = -par['c_uniform'], high = par['c_uniform'], size=[par['n_hidden'], par['n_hidden']]))
 
         par['W_rnn_mask'] = np.ones((par['n_hidden'], par['n_hidden']), dtype=np.float32) - np.eye(par['n_hidden'])
         par['W_rnn_init'] *= par['W_rnn_mask']
@@ -215,7 +215,7 @@ def update_dependencies():
             par['W_rnn_init'][par['ind_inh'], :] = initialize([ par['num_inh_units'], par['n_hidden']], par['connection_prob'], shape=2*par['c_gamma'], scale=1.)
 
     else:
-        par['W_rnn_init'] = np.float32(np.random.uniform(-c_uniform, c_uniform, size = [par['n_hidden'], par['n_hidden']]))
+        par['W_rnn_init'] = np.float32(np.random.uniform(-par['c_uniform'], par['c_uniform'], size = [par['n_hidden'], par['n_hidden']]))
         par['W_rnn_mask'] = np.ones((par['n_hidden'], par['n_hidden']), dtype=np.float32)
 
     # Initialize biases
@@ -230,10 +230,10 @@ def update_dependencies():
         par['W_out_mask'][par['ind_inh'], :] = 0
 
     # Initialize RL-specific weights
-    par['W_pol_out_init'] = np.float32(np.random.uniform(-c_uniform, c_uniform, size = [par['n_hidden'], par['n_pol']]))
+    par['W_pol_out_init'] = np.float32(np.random.uniform(-par['c_uniform'], par['c_uniform'], size = [par['n_hidden'], par['n_pol']]))
     par['b_pol_out_init'] = np.zeros((1,par['n_pol']), dtype = np.float32)
 
-    par['W_val_out_init'] = np.float32(np.random.uniform(-c_uniform, c_uniform, size = [par['n_hidden'], par['n_val']]))
+    par['W_val_out_init'] = np.float32(np.random.uniform(-par['c_uniform'], par['c_uniform'], size = [par['n_hidden'], par['n_val']]))
     par['b_val_out_init'] = np.zeros((1,par['n_val']), dtype = np.float32)
 
     ###
@@ -241,15 +241,15 @@ def update_dependencies():
     ###
 
     if par['architecture'] == 'LSTM':
-        par['Wf_init'] =  np.float32(np.random.uniform(-c_uniform, c_uniform, size = [par['n_input'], par['n_hidden']]))
-        par['Wi_init'] =  np.float32(np.random.uniform(-c_uniform, c_uniform, size = [par['n_input'], par['n_hidden']]))
-        par['Wo_init'] =  np.float32(np.random.uniform(-c_uniform, c_uniform, size = [par['n_input'], par['n_hidden']]))
-        par['Wc_init'] =  np.float32(np.random.uniform(-c_uniform, c_uniform, size = [par['n_input'], par['n_hidden']]))
+        par['Wf_init'] =  np.float32(np.random.uniform(-par['c_uniform'], par['c_uniform'], size = [par['n_input'], par['n_hidden']]))
+        par['Wi_init'] =  np.float32(np.random.uniform(-par['c_uniform'], par['c_uniform'], size = [par['n_input'], par['n_hidden']]))
+        par['Wo_init'] =  np.float32(np.random.uniform(-par['c_uniform'], par['c_uniform'], size = [par['n_input'], par['n_hidden']]))
+        par['Wc_init'] =  np.float32(np.random.uniform(-par['c_uniform'], par['c_uniform'], size = [par['n_input'], par['n_hidden']]))
 
-        par['Uf_init'] =  np.float32(np.random.uniform(-c_uniform, c_uniform, size = [par['n_hidden'], par['n_hidden']]))
-        par['Ui_init'] =  np.float32(np.random.uniform(-c_uniform, c_uniform, size = [par['n_hidden'], par['n_hidden']]))
-        par['Uo_init'] =  np.float32(np.random.uniform(-c_uniform, c_uniform, size = [par['n_hidden'], par['n_hidden']]))
-        par['Uc_init'] =  np.float32(np.random.uniform(-c_uniform, c_uniform, size = [par['n_hidden'], par['n_hidden']]))
+        par['Uf_init'] =  np.float32(np.random.uniform(-par['c_uniform'], par['c_uniform'], size = [par['n_hidden'], par['n_hidden']]))
+        par['Ui_init'] =  np.float32(np.random.uniform(-par['c_uniform'], par['c_uniform'], size = [par['n_hidden'], par['n_hidden']]))
+        par['Uo_init'] =  np.float32(np.random.uniform(-par['c_uniform'], par['c_uniform'], size = [par['n_hidden'], par['n_hidden']]))
+        par['Uc_init'] =  np.float32(np.random.uniform(-par['c_uniform'], par['c_uniform'], size = [par['n_hidden'], par['n_hidden']]))
 
 
         par['bf_init'] = np.zeros((1, par['n_hidden']), dtype = np.float32)
@@ -325,8 +325,7 @@ def load_weights():
         if k != 'h_init':
             par[k+'_init'] = data[k]
         else:
-            par[k] = data[k]
-
+            par[k] = data[k][:par['batch_size'],:]
 
 def gen_gating():
     """

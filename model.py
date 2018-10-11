@@ -446,44 +446,39 @@ class Model:
         # elif par['training_method'] == 'SL':
         #     log_p_theta = tf.stack([mask*time_mask*tf.log(epsilon + output) for (output, mask, time_mask) in \
         #         zip(self.output, self.mask, self.time_mask)], axis = 0)
-        
+
         # NEWEST version from Context-Dependent-Gating
-        p_theta = tf.nn.softmax(self.y, dim = 1)
-        class_ind_one_hot = tf.cast(tf.squeeze(tf.one_hot(tf.multinomial(self.y, 1), par['layer_dims'][-1])), tf.float32)
-        log_p_theta = tf.unstack(class_ind_one_hot*tf.log(p_theta + epsilon), axis = 0)
+        print('FLAG')
+        t0 = time.time()
+        p_theta = tf.nn.softmax(tf.stack(self.output[par['dead_time']//par['dt']:], axis=0), axis=2)
+        class_ind_one_hot = tf.cast(tf.squeeze(tf.one_hot(tf.stack([tf.multinomial(out, 1) for out in self.output[par['dead_time']//par['dt']:]]), par['n_output'])), tf.float32)
+        log_p_theta = tf.unstack(class_ind_one_hot*tf.log(p_theta + epsilon), axis = 1)
 
         # Iterate over the variables to get gradient shapes
         grad_dict = {}
-        for var in self.variables_stabilization:
+        for var in tf.trainable_variables():
             grad_dict[var.op.name] = tf.zeros_like(var)
 
+        print('FLAG START', time.time()-t0)
         # Iterate over the available batches to generate EWC samples
-        # Note:  par['batch_size']//n should not be greater than ~150
-        #        If this limit is reached, divide by a larger number and run
-        #        more EWC batches to maintain both GPU memory requirements
-        #        and network performance
-        for i in range(par['batch_size']//par['EWC_batch_divisor']):
+        for i in range(par['batch_size']):
+            print('FLAG'+str(i))
+            t0 = time.time()
 
             # Compute gradients for each sample
-            for grad, var in opt.compute_gradients(log_p_theta[i], var_list = self.variables_stabilization):
+            for grad, var in opt.compute_gradients(log_p_theta[i], var_list = tf.trainable_variables()):
 
                 # Aggregate gradients
                 grad_dict[var.op.name] += tf.square(grad)/par['batch_size']/par['EWC_fisher_num_batches']
 
+            print('FLAG'+str(i), time.time()-t0)
+
         # Iterate over the variables to assign values to the Fisher operations
-        for var in self.variables_stabilization:
+        for var in tf.trainable_variables():
             fisher_ops.append(tf.assign_add(self.big_omega_var[var.op.name], grad_dict[var.op.name]))
 
         # Make update group
         self.update_big_omega = tf.group(*fisher_ops)
-
-        # OLD CODE
-        # Compute gradients and add to aggregate
-        # grads_and_vars = opt.compute_gradients(log_p_theta, var_list = var_list)
-        # for grad, var in grads_and_vars:
-        #     print(var.op.name)
-        #     fisher_ops.append(tf.assign_add(self.big_omega_var[var.op.name], \
-        #         grad*grad/par['EWC_fisher_num_batches']))
 
 
 def supervised_learning(save_fn='test.pkl', gpu_id=None):
@@ -591,7 +586,7 @@ def supervised_learning(save_fn='test.pkl', gpu_id=None):
                     task_states.append(h)
 
                 accuracy_record.append(task_accs)
-                pickle.dump(accuracy_record, open('./savedir/accuracy_{}.pkl'.format(save_fn), 'wb'))
+                pickle.dump(accuracy_record, open('./savedir/training_accuracy_{}.pkl'.format(save_fn), 'wb'))
 
                 print('Task accuracies:', *['| {:5.3f}'.format(el) for el in task_accs])
                 print('Trained Tasks Mean:', np.mean(off_task_accs), '\n')
@@ -600,10 +595,11 @@ def supervised_learning(save_fn='test.pkl', gpu_id=None):
                     print('Trained tasks 95\% accuracy threshold reached.')
                     break
 
-        print('Saving states, parameters, and weights...')
-        pickle.dump(task_states, open('./savedir/states_{}.pkl'.format(save_fn), 'wb'))
-        pickle.dump({'parameters':par, 'weights':sess.run(model.var_dict)}, open('./weights/weights_for_'+save_fn+'.pkl', 'wb'))
-        print('States, parameters, and weights saved.')
+        if not par['load_from_checkpoint']:
+            print('Saving states, parameters, and weights...')
+            pickle.dump(task_states, open('./savedir/states_{}.pkl'.format(save_fn), 'wb'))
+            pickle.dump({'parameters':par, 'weights':sess.run(model.var_dict)}, open('./weights/weights_for_'+save_fn+'.pkl', 'wb'))
+            print('States, parameters, and weights saved.')
 
         if par['do_k_shot_testing']:
 
@@ -651,7 +647,7 @@ def supervised_learning(save_fn='test.pkl', gpu_id=None):
                 overall_task_accs.append(task_accs)
 
             overall_task_accs = np.mean(np.array(overall_task_accs), axis=0)
-            pickle.dump(overall_task_accs, open('./savedir/kshot_accuracy_{}.pkl'.format(save_fn), 'wb'))
+            pickle.dump(overall_task_accs, open('./savedir/post_kshot_accuracy_{}.pkl'.format(save_fn), 'wb'))
             print('\n-----\nOverall task accuracies:\n   ', *['| {:5.3f}'.format(el) for el in overall_task_accs])
 
     print('\nModel execution for {} complete. (Supervised)'.format(save_fn))
